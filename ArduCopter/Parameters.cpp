@@ -36,6 +36,10 @@
 #endif
 
 const AP_Param::Info Copter::var_info[] = {
+    
+    
+  
+    
     // @Param: FORMAT_VERSION
     // @DisplayName: Eeprom format version number
     // @Description: This value is incremented when changes are made to the eeprom format
@@ -103,6 +107,27 @@ const AP_Param::Info Copter::var_info[] = {
     // @Values: 0:None,1:Roll,2:Pitch,4:Yaw,8:AccelZ
     // @Bitmask: 0:Roll,1:Pitch,2:Yaw,3:AccelZ
     GSCALAR(gcs_pid_mask,           "GCS_PID_MASK",     0),
+
+/*------------------------------------------------------------------------------------------------------------------------------------*/
+
+    // @Param: FLYWORKS_MIX
+    // @DisplayName: FlyWorks ICE mixing gain
+    // @Description: ICE mixing gain. FLYWORKS_IN_CH is set, RC contorl value use instead
+    // @Range: 0 1
+    // @User: Advanced
+    GSCALAR(flyworks_mix, "FLYWORKS_MIX", FLYWORKS_MIX_DEFAULT),
+
+    // @Param: FLYWORKS_IN_CH
+    // @DisplayName: FlyWorks ICE manual mixing ch
+    // @Description: ICE mixing gain. FLYWORKS_IN_CH is set, RC contorl value use instead    // @Range: -32768 32767
+    // @Range: -1 16
+    // @User: Advanced
+    GSCALAR(flyworks_in_ch, "FLYWORKS_IN_CH", FLYWORKS_IN_CH_DEFAULT),
+
+/*------------------------------------------------------------------------------------------------------------------------------------*/
+
+
+
 
 #if MODE_RTL_ENABLED == ENABLED
     // @Param: RTL_ALT

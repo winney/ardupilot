@@ -221,6 +221,13 @@ public:
         k_param_takeoff_trigger_dz_old,
         k_param_gcs3,
         k_param_gcs_pid_mask,    // 126
+/*
+#133 FLYWORKS_MIX_GAIN 0..1 (if 1 - use raw input FLYWORKS_IN_CH for mixing), default 0.5
+#134 FLYWORKS_IN_CH 1..16, default -1
+*/
+        k_param_flyworks_mix = 133,
+        k_param_flyworks_in_ch= 134,
+
 
         //
         // 135 : reserved for Solo until features merged with master
@@ -379,6 +386,7 @@ public:
         // 511: reserved
     };
 
+ 
     AP_Int16        format_version;
 
     // Telemetry control
@@ -464,6 +472,14 @@ public:
     AP_Float                acro_balance_pitch;
     AP_Int8                 acro_trainer;
     AP_Float                acro_rp_expo;
+
+    //FlyWorks parameters
+/*
+#133 FLYWORKS_MIX_GAIN 0..1 (if 1 - use raw input FLYWORKS_IN_CH for mixing), default 0.5
+#134 FLYWORKS_IN_CH 1..16, default -1
+*/
+    AP_Float                flyworks_mix;
+    AP_Int8                 flyworks_in_ch;
 
     // Note: keep initializers here in the same order as they are declared
     // above.

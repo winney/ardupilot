@@ -80,6 +80,15 @@
 // Rangefinder
 //
 
+#ifndef FLYWORKS_IN_CH_DEFAULT
+ # define FLYWORKS_IN_CH_DEFAULT      -1     // default value for my new parameter
+#endif
+
+#ifndef FLYWORKS_MIX_DEFAULT
+ # define FLYWORKS_MIX_DEFAULT      0.5     // default value for my new parameter
+#endif
+
+
 #ifndef RANGEFINDER_ENABLED
  # define RANGEFINDER_ENABLED ENABLED
 #endif
