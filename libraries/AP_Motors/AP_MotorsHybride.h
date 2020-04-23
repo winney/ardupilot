@@ -10,6 +10,18 @@
 #define AP_MOTORS_MATRIX_YAW_FACTOR_CW   -1
 #define AP_MOTORS_MATRIX_YAW_FACTOR_CCW   1
 
+#define MOTORSHYBRIDE_HYBR_CH_IN_DEFAULT    7
+
+#define MOTORSHYBRIDE_HYBR_MIX_MODE_DEFAULT 0
+
+#define MOTORSHYBRIDE_HYBR_ICE_RATE_DEFAULT 100
+
+#define MOTORSHYBRIDE_HYBR_P_GAIN_DEFAULT  0.5
+
+#define MOTORSHYBRIDE_HYBR_I_GAIN_DEFAULT 0
+
+#define MOTORSHYBRIDE_HYBR_D_GAIN_DEFAULT 0
+
 /// @class      AP_MotorsHybride
 class AP_MotorsHybride : public AP_MotorsMulticopter {
 public:
@@ -54,8 +66,13 @@ public:
     // return the roll factor of any motor, this is used for tilt rotors and tail sitters
     // using copter motors for forward flight
     float               get_roll_factor(uint8_t i) override { return _roll_factor[i]; }
+    
+// var_info for holding Parameter information
+    static const struct AP_Param::GroupInfo var_info_hybr[];
 
 protected:
+    uint16_t            get_ice_rc_in(void);
+   
     // output - sends commands to the motors
     void                output_armed_stabilizing() override;
 
@@ -75,7 +92,7 @@ protected:
     void                remove_motor(int8_t motor_num);
 
     // configures the motors for the defined frame_class and frame_type
-    virtual void        setup_motors(motor_frame_class frame_class, motor_frame_type frame_type);
+    virtual void        setup_motors(motor_frame_type frame_type);
 
     // normalizes the roll, pitch and yaw factors so maximum magnitude is 0.5
     void                normalise_rpy_factors();
@@ -94,4 +111,12 @@ protected:
     // motor failure handling
     float               _thrust_rpyt_out_filt[AP_MOTORS_MAX_NUM_MOTORS];    // filtered thrust outputs with 1 second time constant
     uint8_t             _motor_lost_index;  // index number of the lost motor
+
+   AP_Int8             _hybride_ice_ch_in;
+   AP_Int8             _hybride_mixing_mode;
+   AP_Int8             _hybride_ice_slew_rate;
+   AP_Float            _hybride_mixing_gain_P;
+   AP_Float            _hybride_mixing_gain_I;
+   AP_Float            _hybride_mixing_gain_D;
+
 };

@@ -12,3 +12,4 @@
 #include "AP_MotorsTailsitter.h"
 #include "AP_Motors6DOF.h"
 #include "AP_MotorsMatrixTS.h"
+#include "AP_MotorsHybride.h"

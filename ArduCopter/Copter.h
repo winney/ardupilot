@@ -422,6 +422,8 @@ private:
     MOTOR_CLASS *motors;
     const struct AP_Param::GroupInfo *motors_var_info;
 
+    AP_MotorsHybride *hybride;
+
     int32_t _home_bearing;
     uint32_t _home_distance;
 
