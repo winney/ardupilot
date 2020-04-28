@@ -208,6 +208,9 @@ const AP_Scheduler::Task Copter::scheduler_tasks[] = {
 #if OSD_ENABLED == ENABLED
     SCHED_TASK(publish_osd_info, 1, 10),
 #endif
+
+//SCHED_TASK_CLASS(AP_ICEngine, &copter.g2.ice_control, update, 10, 100),
+
 };
 
 void Copter::get_scheduler_tasks(const AP_Scheduler::Task *&tasks,

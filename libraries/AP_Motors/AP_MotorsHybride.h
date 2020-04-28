@@ -2,25 +2,39 @@
 /// @brief	Motor control class for FlyWorks Hybride
 #pragma once
 
+#define DEBUG_MOTORSHYBRIDE
+
+#if defined DEBUG_MOTORSHYBRIDE 
+#include <GCS_MAVLink/GCS.h>
+#endif
+
 #include <AP_Common/AP_Common.h>
 #include <AP_Math/AP_Math.h>        // ArduPilot Mega Vector/Matrix math Library
-#include <RC_Channel/RC_Channel.h>     // RC Channel Library
+#include <RC_Channel/RC_Channel.h>  // RC Channel Library
 #include "AP_MotorsMulticopter.h"
 
-#define AP_MOTORS_MATRIX_YAW_FACTOR_CW   -1
-#define AP_MOTORS_MATRIX_YAW_FACTOR_CCW   1
+#define AP_MOTORS_MATRIX_YAW_FACTOR_CW      -1
+#define AP_MOTORS_MATRIX_YAW_FACTOR_CCW     1
 
 #define MOTORSHYBRIDE_HYBR_CH_IN_DEFAULT    7
 
 #define MOTORSHYBRIDE_HYBR_MIX_MODE_DEFAULT 0
 
-#define MOTORSHYBRIDE_HYBR_ICE_RATE_DEFAULT 100
+#define MOTORSHYBRIDE_HYBR_ICE_RATE_DEFAULT 0
 
-#define MOTORSHYBRIDE_HYBR_P_GAIN_DEFAULT  0.5
+#define MOTORSHYBRIDE_HYBR_P_GAIN_DEFAULT   0.5
 
-#define MOTORSHYBRIDE_HYBR_I_GAIN_DEFAULT 0
+#define MOTORSHYBRIDE_HYBR_I_GAIN_DEFAULT   0
 
-#define MOTORSHYBRIDE_HYBR_D_GAIN_DEFAULT 0
+#define MOTORSHYBRIDE_HYBR_D_GAIN_DEFAULT   0
+
+#define MOTORSHYBRIDE_HYBR_I_LIM_DEFAULT    0.25   
+
+#define HYBRYDE_MIXING_MODE_PASSTHROUGH     1
+#define HYBRYDE_MIXING_MODE_CONST_GAIN      2
+#define HYBRIDE_MIXING_MODE_PID             4
+
+
 
 /// @class      AP_MotorsHybride
 class AP_MotorsHybride : public AP_MotorsMulticopter {
@@ -71,8 +85,21 @@ public:
     static const struct AP_Param::GroupInfo var_info_hybr[];
 
 protected:
-    uint16_t            get_ice_rc_in(void);
-   
+    
+    // read parameters from params list
+    int8_t              get_param_ch_in(void);
+    int8_t              get_param_mix_mode(void);
+    double              get_param_mix_P_gain(void);
+    double              get_param_mix_I_gain(void);
+    double              get_param_mix_D_gain(void);
+    double              get_param_mix_I_lim(void);
+    double              get_param_ice_slew_rate(void);
+    
+    double              get_ice_rc_in(int8_t ch);
+    void                rc_write_ice(double thr);
+    double              ice_throttle_slew_rate_check(double thr);
+    double              ice_pid_control(double err);
+    
     // output - sends commands to the motors
     void                output_armed_stabilizing() override;
 
@@ -114,9 +141,13 @@ protected:
 
    AP_Int8             _hybride_ice_ch_in;
    AP_Int8             _hybride_mixing_mode;
-   AP_Int8             _hybride_ice_slew_rate;
+   AP_Float            _hybride_ice_slew_rate;
    AP_Float            _hybride_mixing_gain_P;
    AP_Float            _hybride_mixing_gain_I;
    AP_Float            _hybride_mixing_gain_D;
+   AP_Float            _hybride_mixing_I_lim; 
+
+   SRV_Channel         *_ice_servo;
+   double              _ice_throttle;
 
 };

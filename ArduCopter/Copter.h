@@ -68,6 +68,8 @@
 #include <AP_Parachute/AP_Parachute.h>
 #include <AC_Sprayer/AC_Sprayer.h>
 
+#include <AP_ICEngine/AP_ICEngine.h> //ICE Engine App Library
+
 // Configuration
 #include "defines.h"
 #include "config.h"
@@ -232,6 +234,8 @@ public:
     friend class ModeAutorotate;
 
     Copter(void);
+
+    AP_MotorsHybride *hybride;
 
 private:
 
@@ -422,7 +426,7 @@ private:
     MOTOR_CLASS *motors;
     const struct AP_Param::GroupInfo *motors_var_info;
 
-    AP_MotorsHybride *hybride;
+ //   AP_MotorsHybride *hybride;
 
     int32_t _home_bearing;
     uint32_t _home_distance;

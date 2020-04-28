@@ -549,6 +549,9 @@ public:
     // frame class
     AP_Int8 frame_class;
 
+//    // internal combustion engine control
+//    AP_ICEngine ice_control;
+
     // RC input channels
     RC_Channels_Copter rc_channels;
     

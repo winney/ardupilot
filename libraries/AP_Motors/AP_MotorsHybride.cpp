@@ -9,7 +9,6 @@
 
 extern const AP_HAL::HAL &hal;
 
-
 // parameters for the motor class
 const AP_Param::GroupInfo AP_MotorsHybride::var_info_hybr[] = {
  
@@ -31,9 +30,9 @@ const AP_Param::GroupInfo AP_MotorsHybride::var_info_hybr[] = {
 
   // @Param: HYBR_ICE_RATE
   // @DisplayName: Hybride ICE throttle change max rate.
-  // @Description: Hybride ICE throttle change max rate, % per second, value 50 means throttle changes from min to max value in a 2 seconds.
-  // @Range: 0 100
-  // @Increment: 1
+  // @Description: Hybride ICE throttle changes immidiatly if 0, throttle change from max to min takes 10 sec if value 10.
+  // @Range: 0 10
+  // @Increment: 0.1
   // @User: Advanced
    AP_GROUPINFO("ICE_RATE", 2, AP_MotorsHybride, _hybride_ice_slew_rate, MOTORSHYBRIDE_HYBR_ICE_RATE_DEFAULT),
 
@@ -61,12 +60,22 @@ const AP_Param::GroupInfo AP_MotorsHybride::var_info_hybr[] = {
    // @User: Advanced
    AP_GROUPINFO("D_GAIN", 5, AP_MotorsHybride, _hybride_mixing_gain_D, MOTORSHYBRIDE_HYBR_D_GAIN_DEFAULT),
 
+   // @Param: HYBR_I_LIM
+   // @DisplayName: Hybride mixing gain.
+   // @Description: Hybride mixing I-gain for PID-mixing mode.
+   // @Range: -0.5 0.5
+   // @Increment: 0.001
+   // @User: Advanced
+   AP_GROUPINFO("I_LIM", 6, AP_MotorsHybride, _hybride_mixing_I_lim, MOTORSHYBRIDE_HYBR_I_LIM_DEFAULT),
+
    AP_GROUPEND
 };
 
 // init
 void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type frame_type)
 {
+    
+    
     // record requested frame class and type
     _last_frame_class = frame_class;
     _last_frame_type = frame_type;
@@ -77,6 +86,19 @@ void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type fram
     // enable fast channels or instant pwm
     set_update_rate(_speed_hz);
 
+    // Find the ICE control servo with SERVOXX_Function == 70
+    uint8_t chan;
+    if (!SRV_Channels::find_channel(SRV_Channel::k_throttle,chan))
+    {
+        gcs().send_text(MAV_SEVERITY_ERROR, "ICE servo chennal not found");
+    }
+    else
+    {
+        /* code */
+        gcs().send_text(MAV_SEVERITY_ALERT, "ICE servo chennal #%d",chan+1);
+
+        _ice_servo = SRV_Channels::get_channel_for(SRV_Channel::k_throttle, chan);
+    }
 }
 
 // set update rate to motors - a value in hertz
@@ -164,6 +186,9 @@ void AP_MotorsHybride::output_to_motors()
             rc_write(i, output_to_pwm(_actuator[i]));
         }
     }
+   
+     rc_write_ice(ice_throttle_slew_rate_check(_ice_throttle));
+   
 }
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
@@ -201,6 +226,8 @@ void AP_MotorsHybride::output_armed_stabilizing()
     float rpy_scale = 1.0f;         // this is used to scale the roll, pitch and yaw to fit within the motor limits
     float yaw_allowed = 1.0f;       // amount of yaw we can fit in
     float thr_adj;                  // the difference between the pilot's desired throttle and throttle_thrust_best_rpy
+
+    
 
     // apply voltage and air pressure compensation
     const float compensation_gain = get_compensation_gain(); // compensation for battery voltage and altitude
@@ -427,6 +454,33 @@ void AP_MotorsHybride::output_armed_stabilizing()
 
     // check for failed motor
     check_for_failed_motor(throttle_thrust_best_plus_adj);
+
+    switch (get_param_mix_mode())
+    {
+        case HYBRYDE_MIXING_MODE_PASSTHROUGH:
+            _ice_throttle = get_ice_rc_in(get_param_ch_in());
+        break;
+        case HYBRYDE_MIXING_MODE_CONST_GAIN:
+            // if RC_IN disabled: _ice_throttle = get_throttle() * HYBRIDE_P_GAIN
+            // else: _ice_throttle = get_throttle() * HYBRIDE_P_GAIN * RC_IN_throttle
+
+            _ice_throttle = get_throttle()*get_param_mix_P_gain();  //get_param_mix_P_gain
+            if (get_param_ch_in() >=0)                              //if rc_in enabled
+            {
+                _ice_throttle *= get_ice_rc_in(get_param_ch_in());
+            }
+        break;
+        case HYBRIDE_MIXING_MODE_PID:
+            _ice_throttle = ice_pid_control(get_ice_rc_in(get_param_ch_in()) - get_throttle());
+        break;
+        default:
+            static uint16_t counter = 0;
+            if (++counter > 500)
+            {
+                counter = 0;
+                gcs().send_text(MAV_SEVERITY_ERROR, "Param HYBRIDE_MIX_MODE not set");
+            }
+    }
 }
 
 // check for failed motor
@@ -540,6 +594,8 @@ bool AP_MotorsHybride::output_test_num(uint8_t output_channel, int16_t pwm)
     }
 
     rc_write(output_channel, pwm); // output
+
+    
     return true;
 }
 
@@ -618,8 +674,6 @@ void AP_MotorsHybride::setup_motors(motor_frame_type frame_type)
         add_motor(AP_MOTORS_MOT_4, 60, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 2);
         add_motor(AP_MOTORS_MOT_5, -60, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 6);
         add_motor(AP_MOTORS_MOT_6, 120, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 3);
-        add_motor_raw(AP_MOTORS_MOT_7, 0.0f, 0.0f, 0.0f, 7);
-
         break;
     case MOTOR_FRAME_TYPE_X:
         add_motor(AP_MOTORS_MOT_1, 90, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 2);
@@ -628,7 +682,6 @@ void AP_MotorsHybride::setup_motors(motor_frame_type frame_type)
         add_motor(AP_MOTORS_MOT_4, 150, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 3);
         add_motor(AP_MOTORS_MOT_5, 30, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 1);
         add_motor(AP_MOTORS_MOT_6, -150, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 4);
-        add_motor_raw(AP_MOTORS_MOT_7, 0.0f, 0.0f, 0.0f, 7);
         break;
     case MOTOR_FRAME_TYPE_H:
         // H is same as X except middle motors are closer to center
@@ -638,7 +691,6 @@ void AP_MotorsHybride::setup_motors(motor_frame_type frame_type)
         add_motor_raw(AP_MOTORS_MOT_4, -1.0f, -1.0f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 3);
         add_motor_raw(AP_MOTORS_MOT_5, -1.0f, 1.0f, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 1);
         add_motor_raw(AP_MOTORS_MOT_6, 1.0f, -1.0f, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 4);
-        add_motor_raw(AP_MOTORS_MOT_7, 0.0f, 0.0f, 0.0f, 7);
         break;
     case MOTOR_FRAME_TYPE_CW_X:
         add_motor(AP_MOTORS_MOT_1, 30, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 1);
@@ -647,7 +699,6 @@ void AP_MotorsHybride::setup_motors(motor_frame_type frame_type)
         add_motor(AP_MOTORS_MOT_4, -150, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 4);
         add_motor(AP_MOTORS_MOT_5, -90, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 5);
         add_motor(AP_MOTORS_MOT_6, -30, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 6);
-        add_motor_raw(AP_MOTORS_MOT_7, 0.0f, 0.0f, 0.0f, 7);
         break;
     default:
         // Flyworks Hybride frame class does not support this frame type
@@ -655,6 +706,7 @@ void AP_MotorsHybride::setup_motors(motor_frame_type frame_type)
         break;
     }
 
+//    add_motor_raw(AP_MOTORS_MOT_7, 0.0f, 0.0f, 0.0f, 7);
     // normalise factors to magnitude 0.5
     normalise_rpy_factors();
 
@@ -720,8 +772,163 @@ void AP_MotorsHybride::thrust_compensation(void)
     }
 }
 
-uint16_t AP_MotorsHybride::get_ice_rc_in(void)
+/*
+  returns relative desired throttle in range 0..1, where 0 == RC#_MIN and 1 == RC#_MAX
+  This function ignore RC#_REV parameter
+*/
+ double AP_MotorsHybride::get_ice_rc_in(int8_t ch_in)
 {
-    uint16_t val = hal.rcin->read(_hybride_ice_ch_in);
+    uint16_t val= 1500;
+    double out = 0;
+    
+    if (ch_in < 0) return 0;
+
+    RC_Channel *c = rc().channel((uint8_t)ch_in - 1);
+ 
+    if (c != nullptr) 
+    {
+        // get ICE control channel
+        val = c-> get_radio_in();
+
+        if (val < c->get_radio_min()) return 0;
+        else if (val > c->get_radio_max()) return 1;
+
+        val -= c->get_radio_min();
+        out = (double)val / (c->get_radio_max() - c->get_radio_min());
+    }
+    return out;
+}
+
+int8_t AP_MotorsHybride::get_param_ch_in(void)
+{
+    char name[] = "HYBR_CH_IN";
+    float val;
+    
+    if (!AP_Param::get(name,val))   return -1;  //error level
+    if (val < 0)                    return -1;  //error level
+    if (val > 16)                   return -1;  //error level
+    return ((int8_t)val);
+}
+
+int8_t AP_MotorsHybride::get_param_mix_mode(void)
+{
+    char name[] = "HYBR_MIX_MODE";
+    float val;
+    
+    if (!AP_Param::get(name,val))   return -1;  //error level
+    if (val < 1)                    return -1;  //error level
+    if (val > 5)                    return -1;  //error level
+    return ((int8_t)val);
+}
+
+double  AP_MotorsHybride::get_param_mix_P_gain(void)
+{
+    char name[] = "HYBR_P_GAIN";
+    float val;
+
+    if (!AP_Param::get(name,val))   return 0;   //error level
+    if (val < 0)                    return 0;   //min allowed level
+    if (val > 2)                    return 2;   //max allowed level
+    return val;
+}
+
+double  AP_MotorsHybride::get_param_mix_I_gain(void)
+{
+    char name[] = "HYBR_I_GAIN";
+    float val;
+
+    if (!AP_Param::get(name,val))   return 0;   //error level
+    if (val < 0)                    return 0;   //min allowed level
+    if (val > 2)                    return 2;   //max allowed level
+    return val;
+}
+
+double  AP_MotorsHybride::get_param_mix_D_gain(void)
+{
+    char name[] = "HYBR_D_GAIN";
+    float val;
+
+    if (!AP_Param::get(name,val))   return 0;   //error level
+    if (val < 0)                    return 0;   //min allowed level
+    if (val > 10)                   return 10;   //max allowed level
+    return val;
+}
+
+double  AP_MotorsHybride::get_param_mix_I_lim(void)
+{
+    char name[] = "HYBR_I_LIM";
+    float val;
+
+    if (!AP_Param::get(name,val))   return 0;   //error level
+    if (val < 0)                    return 0;   //min allowed level
+    if (val > 2)                    return 2;   //max allowed level
+    return val;
+}
+
+double  AP_MotorsHybride::get_param_ice_slew_rate(void)
+{
+    char name[] = "HYBR_ICE_RATE";
+    float val;
+
+    if (!AP_Param::get(name,val))   return 0;   //error level
+    if (val < 0)                    return 0;   //min allowed level
+    if (val > 10)                   return 10;  //max allowed level
+    return val;
+}
+
+/*
+    Limit the ICE throttle rate level
+    inpute/output range 0..1
+    Function returns updated throttle level
+*/
+double AP_MotorsHybride::ice_throttle_slew_rate_check(double thr)
+{
+    static double thr_last = 0;
+    double max_diff = 1/((get_param_ice_slew_rate() * _loop_rate)+1);
+
+    if(thr >= thr_last)
+    {
+        if ((thr - thr_last) > max_diff) thr_last += max_diff;
+        else  thr_last = thr; 
+    }
+    else 
+    {
+        if ((thr_last - thr) > max_diff) thr_last -= max_diff;
+        else  thr_last = thr;
+    }
+
+    return thr_last;
+} 
+
+/*
+    Set ICE servo pwm to the value, equel to calculated ICE throttle.
+    This function ignore SERVO#_REV parameter
+*/
+void AP_MotorsHybride::rc_write_ice(double thr)
+{    
+    uint16_t ice_throttle_to_set = _ice_servo->get_output_min();
+    
+    ice_throttle_to_set += (uint16_t)(thr * (_ice_servo->get_output_max() - _ice_servo->get_output_min()));
+    
+    _ice_servo->set_output_pwm(ice_throttle_to_set);
+}
+
+/*
+    PID controler
+*/
+double AP_MotorsHybride::ice_pid_control(double err)
+{    
+    double val;
+    static double integral = 0;
+    static double last_err = 0;
+
+    integral += err;
+    if (integral> get_param_mix_I_lim())integral = get_param_mix_I_lim();
+    else if (integral< - get_param_mix_I_lim())integral = - get_param_mix_I_lim();
+
+    val = err * get_param_mix_P_gain() + integral * get_param_mix_I_gain() + (err - last_err) * get_param_mix_D_gain();
+    if (val>1) val = 1;
+    else if (val<0) val = 0;
+
     return val;
 }
