@@ -96,7 +96,7 @@ void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type fram
     else
     {
         /* code */
-        gcs().send_text(MAV_SEVERITY_ALERT, "ICE servo chennal #%d",chan+1);
+        gcs().send_text(MAV_SEVERITY_NOTICE, "ICE servo chennal #%d",chan+1);
         _ice_servo = SRV_Channels::get_channel_for(SRV_Channel::k_throttle, chan);
         _ice_servo_set_flag = true;
 
