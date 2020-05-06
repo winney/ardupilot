@@ -148,6 +148,7 @@ protected:
    AP_Float            _hybride_mixing_I_lim; 
 
    SRV_Channel         *_ice_servo;
+   bool                _ice_servo_set_flag;
    double              _ice_throttle;
 
 };

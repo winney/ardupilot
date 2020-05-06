@@ -91,13 +91,15 @@ void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type fram
     if (!SRV_Channels::find_channel(SRV_Channel::k_throttle,chan))
     {
         gcs().send_text(MAV_SEVERITY_ERROR, "ICE servo chennal not found");
+        _ice_servo_set_flag = false;
     }
     else
     {
         /* code */
         gcs().send_text(MAV_SEVERITY_ALERT, "ICE servo chennal #%d",chan+1);
-
         _ice_servo = SRV_Channels::get_channel_for(SRV_Channel::k_throttle, chan);
+        _ice_servo_set_flag = true;
+
     }
 }
 
@@ -187,8 +189,10 @@ void AP_MotorsHybride::output_to_motors()
         }
     }
    
-     rc_write_ice(ice_throttle_slew_rate_check(_ice_throttle));
-   
+    if (_ice_servo_set_flag)
+    {
+        rc_write_ice(ice_throttle_slew_rate_check(_ice_throttle));
+    }
 }
 
 // get_motor_mask - returns a bitmask of which outputs are being used for motors (1 means being used)
