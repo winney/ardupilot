@@ -83,6 +83,28 @@ void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type fram
     // setup the motors
     setup_motors(frame_type);
 
+    switch (frame_type){
+    case MOTOR_FRAME_TYPE_PLUS:
+       gcs().send_text(MAV_SEVERITY_ERROR, "HYBRID HEXA-PLUS frame selected.");
+       break;
+    case MOTOR_FRAME_TYPE_X:
+        gcs().send_text(MAV_SEVERITY_ERROR, "HYBRID HEXA-X frame selected.");
+        break;
+    case MOTOR_FRAME_TYPE_H:
+        // H is same as X except middle motors are closer to center
+        gcs().send_text(MAV_SEVERITY_ERROR, "HYBRID HEXA-H frame selected.");
+        break;
+    case MOTOR_FRAME_TYPE_CW_X:
+        gcs().send_text(MAV_SEVERITY_ERROR, "HYBRID HEXA-CW-X frame selected.");
+        break;
+    case MOTOR_FRAME_TYPE_SIDETHRUSTER:
+        gcs().send_text(MAV_SEVERITY_ERROR, "Quad with side thrusters frame selected.");
+    break; 
+    default:
+        gcs().send_text(MAV_SEVERITY_ERROR, "Unsupported FRAME_TYPE selected.");
+        break;
+    }
+
     // enable fast channels or instant pwm
     set_update_rate(_speed_hz);
 
@@ -704,6 +726,12 @@ void AP_MotorsHybride::setup_motors(motor_frame_type frame_type)
         add_motor(AP_MOTORS_MOT_5, -90, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 5);
         add_motor(AP_MOTORS_MOT_6, -30, AP_MOTORS_MATRIX_YAW_FACTOR_CW, 6);
         break;
+    case MOTOR_FRAME_TYPE_SIDETHRUSTER:
+        add_motor(AP_MOTORS_MOT_1,   45, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  1);
+        add_motor(AP_MOTORS_MOT_2, -135, AP_MOTORS_MATRIX_YAW_FACTOR_CW,  3);
+        add_motor(AP_MOTORS_MOT_3,  -45, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 4);
+        add_motor(AP_MOTORS_MOT_4,  135, AP_MOTORS_MATRIX_YAW_FACTOR_CCW, 2);
+    break; 
     default:
         // Flyworks Hybride frame class does not support this frame type
         success = false;
