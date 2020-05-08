@@ -506,15 +506,16 @@ void AP_MotorsHybride::output_armed_stabilizing()
                 gcs().send_text(MAV_SEVERITY_ERROR, "Param HYBRIDE_MIX_MODE not set");
             }
     }
+
     if(1)
     {
-        static uint16_t cnt = 0;
-        if(++cnt >= 500)
-        {
-            cnt = 0;
-            gcs().send_text(MAV_SEVERITY_ERROR, "ICE_SERVO %d, MIX_MODE %d, Throttle %f", _ice_servo_chan +1, get_param_mix_mode(), _ice_throttle);
+         static uint16_t cnt = 0;
+         if(++cnt >= 500)
+         {
+             cnt = 0;
+             gcs().send_text(MAV_SEVERITY_ERROR, "ICE_SERVO %d, Throttle %f", _ice_servo_chan +1, _ice_throttle);
 
-        }
+         }
     }
 }
 
@@ -855,10 +856,26 @@ int8_t AP_MotorsHybride::get_param_mix_mode(void)
 {
     char name[] = "HYBR_MIX_MODE";
     float val;
+    static uint16_t cnt1 = 0;
+    if (!AP_Param::get(name,val))   
+    {
+        if (++cnt1 >=500)
+        {
+            cnt1 = 0;
+            gcs().send_text(MAV_SEVERITY_ERROR, "HYBR_MIX_MODE read error");
+        }
+        return -1;  //error level
+    }
+   
+    if (++cnt1 >=500)
+    {
+        cnt1 = 0;
+        gcs().send_text(MAV_SEVERITY_ERROR, "HYBR_MIX_MODE %d", (uint8_t)val);/* code */
+    }
     
-    if (!AP_Param::get(name,val))   return -1;  //error level
     if (val < 1)                    return -1;  //error level
     if (val > 5)                    return -1;  //error level
+    
     return ((int8_t)val);
 }
 
