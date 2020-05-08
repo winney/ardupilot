@@ -109,8 +109,7 @@ void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type fram
     set_update_rate(_speed_hz);
 
     // Find the ICE control servo with SERVOXX_Function == 70
-    uint8_t chan;
-    if (!SRV_Channels::find_channel(SRV_Channel::k_throttle,chan))
+    if (!SRV_Channels::find_channel(SRV_Channel::k_throttle,_servo_chan_ice))
     {
         gcs().send_text(MAV_SEVERITY_ERROR, "ICE servo chennal not found");
         _ice_servo_set_flag = false;
@@ -118,8 +117,8 @@ void AP_MotorsHybride::init(motor_frame_class frame_class, motor_frame_type fram
     else
     {
         /* code */
-        gcs().send_text(MAV_SEVERITY_NOTICE, "ICE servo chennal #%d",chan+1);
-        _ice_servo = SRV_Channels::get_channel_for(SRV_Channel::k_throttle, chan);
+        gcs().send_text(MAV_SEVERITY_NOTICE, "ICE servo chennal #%d",_servo_chan_ice+1);
+        _ice_servo = SRV_Channels::get_channel_for(SRV_Channel::k_throttle, _servo_chan_ice);
         _ice_servo_set_flag = true;
 
     }
@@ -481,6 +480,17 @@ void AP_MotorsHybride::output_armed_stabilizing()
     // check for failed motor
     check_for_failed_motor(throttle_thrust_best_plus_adj);
 
+    if(1)
+    {
+        static uint16_t cnt = 0;
+        if (++cnt >=500)
+        {
+            cnt = 0;
+            gcs().send_text(MAV_SEVERITY_NOTICE, "ICE servo chennal #%d",_servo_chan_ice);                
+        }
+    }
+
+
     switch (get_param_mix_mode())
     {
         case HYBRYDE_MIXING_MODE_PASSTHROUGH:
@@ -507,6 +517,17 @@ void AP_MotorsHybride::output_armed_stabilizing()
                 gcs().send_text(MAV_SEVERITY_ERROR, "Param HYBRIDE_MIX_MODE not set");
             }
     }
+
+    if(1)
+    {
+        static uint16_t cnt = 0;
+        if (++cnt >=500)
+        {
+            cnt = 0;
+            gcs().send_text(MAV_SEVERITY_NOTICE, "MIXING_MODE %d ICE_THR %f",get_param_mix_mode(),_ice_throttle);                
+        }
+    }
+
 }
 
 // check for failed motor
