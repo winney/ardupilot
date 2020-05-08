@@ -883,8 +883,23 @@ double  AP_MotorsHybride::get_param_mix_P_gain(void)
 {
     char name[] = "HYBR_P_GAIN";
     float val;
+    static uint16_t cnt1 = 0;
+    if (!AP_Param::get(name,val))   
+    {
+        if (++cnt1 >=500)
+        {
+            cnt1 = 0;
+            gcs().send_text(MAV_SEVERITY_ERROR, "HYBR_P_GAIN read error");
+        }
+        return 0;  //error level
+    }    
+    
+    if (++cnt1 >=500)
+    {
+        cnt1 = 0;
+        gcs().send_text(MAV_SEVERITY_ERROR, "HYBR_P_GAIN %f",val);
+    }
 
-    if (!AP_Param::get(name,val))   return 0;   //error level
     if (val < 0)                    return 0;   //min allowed level
     if (val > 2)                    return 2;   //max allowed level
     return val;
