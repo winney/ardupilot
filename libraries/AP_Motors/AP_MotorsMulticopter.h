@@ -203,4 +203,6 @@ protected:
 
     // array of motor output values
     float _actuator[AP_MOTORS_MAX_NUM_MOTORS];
+
+    uint8_t _servo_chan_ice;
 };
