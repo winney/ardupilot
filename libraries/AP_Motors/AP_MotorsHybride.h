@@ -150,5 +150,6 @@ protected:
    SRV_Channel         *_ice_servo;
    bool                _ice_servo_set_flag;
    double              _ice_throttle;
+   uint8_t             _ice_servo_chan;
 
 };
